@@ -1,61 +1,99 @@
 
 require_relative 'b.option.rb'
+require_relative 'b.path.rb'
 require_relative 'b.dhms.rb'
 
-OPT = B::Option.new(
-  # mongo
-  server:          String,
-  db:              String,
-  user:            String,
-  password:        String,
-  auth:            String,
+Option_fishprint = [
+  B::Option::Property.new(
+    long:        'toml',
+    description: 'TOML filename (find it from XDG config)',
+    normalizer: -> s { B::Path.find_first_config s },
+    default:     'fishprint.toml',
+  ),
+  B::Option::Property.new(
+    long:        'daemonize',
+    boolean:     true,
+    description: 'Run as a daemon process',
+  ),
+]
 
-  # curl
-  agent:           String,
-  retry_plan:      String,
-  connect_timeout: Numeric,
-  timeout:         Numeric,
-  max_redirects:   Integer,
-  cookiejar:       String,
-  config:          String,
+Option_mongo = [
+  B::Option::Property.new(
+    long:        'mongo.host',
+    description: 'MongoDB Host',
+    default:     '127.0.0.1',
+  ),
+  B::Option::Property.new(
+    long:        'mongo.port',
+    description: 'MongoDB Port',
+    default:     27017,
+  ),
+  B::Option::Property.new(
+    long:        'mongo.db',
+    description: 'MongoDB Database',
+    default:     'fishprint',
+  ),
+  B::Option::Property.new(
+    long:        'mongo.user',
+    description: 'MongoDB User',
+  ),
+  B::Option::Property.new(
+    long:        'mongo.pw',
+    description: 'MongoDB Password',
+  ),
+  B::Option::Property.new(
+    long:        'mongo.auth',
+    description: 'MongoDB Authorization Source',
+  ),
+]
 
-  # sinatra
-  s_host:          String,
-  s_port:          Integer,
-)
-OPT.normalizer retry_plan: -> str do
-  str.split(',').map(&:strip).map{ B::dhms2sec _1 }
-end
-OPT.default(
-  server:          '127.0.0.1',
-  db:              'fishprint',
-  retry_plan:      '10sec,1min,15min',
-  connect_timeout: 60,
-  timeout:         3600,
-  max_redirects:   10,
-  cookiejar:       'cookies.fishprint.txt',
-  config:          'fishprint.yml',
-  s_host:          'localhost',
-  s_port:          33333,
-)
-OPT.short(
-  config:          'c',
-  retry_plan:      'r',
-)
-OPT.description(
-  server:          'Mongo Server',
-  db:              'Mongo Database',
-  user:            'Mongo User',
-  password:        'Mongo Password',
-  auth:            'Mongo Authorization Source',
-  agent:           'Curl  User-Agent',
-  connect_timeout: 'Curl  Timeout for connection',
-  timeout:         'Curl  Timeout',
-  max_redirects:   'Curl  Redirect limit',
-  retry_plan:      'Retry plan in dhms strings',
-  cookiejar:       'Cookie jar',
-  config:          'Load YML file from XDG config dir (if exists)',
-  s_host:          'sinatra host',
-  s_port:          'sinatra listen port',
-)
+Option_curl = [
+  B::Option::Property.new(
+    long:        'curl.agent',
+    description: 'Curl User-Agent',
+  ),
+  B::Option::Property.new(
+    long:        'curl.retry_plan',
+    description: 'Curl Retry delay(s)',
+    normalizer: -> s { s.split(',').map{ B::dhms2sec _1 } },
+    default:     '1sec,5sec,1min,5min',
+  ),
+  B::Option::Property.new(
+    long:        'curl.connect_timeout',
+    description: 'Curl connect_timeout',
+    normalizer: -> s { B::dhms2sec s },
+    default:     '1min',
+  ),
+  B::Option::Property.new(
+    long:        'curl.timeout',
+    description: 'Curl timeout',
+    normalizer: -> s { B::dhms2sec s },
+    default:     '5min',
+  ),
+  B::Option::Property.new(
+    long:        'curl.max_redirects',
+    description: 'Curl max_redirects',
+    normalizer:  :to_integer,
+    default:     10,
+  ),
+  B::Option::Property.new(
+    long:        'curl.cookiejar',
+    description: 'Curl Cookiejar file path',
+    normalizer: -> s { B::Path.new s },
+    default:     'cookies.fishprint.txt',
+  ),
+]
+
+Option_sinatra = [
+  B::Option::Property.new(
+    long:        'sinatra.bind',
+    description: 'Sinatra Bind ',
+    default:     '0.0.0.0',
+  ),
+  B::Option::Property.new(
+    long:        'sinatra.port',
+    description: 'Sinatra Port',
+    default:     33333,
+  ),
+]
 

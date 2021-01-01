@@ -2,48 +2,45 @@
 # -*- coding: utf-8 -*-
 
 require_relative 'fp.option.rb'
-require_relative 'fp.server.rb'
+require_relative 'fp.fishprint.rb'
 
 begin
-  OPT.parse ARGV
-  cfg = B::Path::find_first_config OPT[:config]
-  if cfg
-    OPT.yaml_underlay cfg
-  end
+  option = B::Option.new
+  option.register Option_fishprint
+  option.register Option_mongo
+  option.register Option_curl
+  option.register Option_sinatra
+  option.make!
 rescue => e
   STDERR.puts e.message
   STDERR.puts
   exit 1
 end
 
-fp = FishPrint.new(
-  **OPT.slice(
-    :agent,
-    :connect_timeout,
-    :timeout,
-    :max_redirects,
-    :cookiejar,
-    :retry_plan,
-    :server,
-    :db,
-    :user,
-    :password,
-    :auth
-  )
+fishprint = FishPrint.new(
+  agent:           option['curl.agent'],
+  connect_timeout: option['curl.connect_timeout'],
+  timeout:         option['curl.timeout'],
+  max_redirects:   option['curl.max_redirects'],
+  cookiejar:       option['curl.cookiejar'],
+  retry_plan:      option['curl.retry_plan'],
+  server:          option['mongo.host'],
+  db:              option['mongo.db'],
+  user:            option['mongo.user'],
+  password:        option['mongo.pw'],
+  auth:            option['mongo.auth']
 )
-
-ARGV.clear
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 require 'sinatra'
-require 'sinatra/reloader'
+# require 'sinatra/reloader'
 
-set :bind, OPT[:s_host]
-set :port, OPT[:s_port]
+set :bind, option['sinatra.bind']
+set :port, option['sinatra.port']
 
 post '/fetch' do
-  result = fp.get(
+  result = fishprint.get(
     request.params[FP::Q_TARGET],
     referer: request.params[FP::Q_REFERER],
     agent:   request.params[FP::Q_AGENT],
@@ -72,23 +69,23 @@ get '/form' do
 end
 
 get '/u/?' do
-  fp.find_urls.map do |i|
+  fishprint.find_urls.map do |i|
     "#{i['_id']} - #{i['url']}<br>\n"
   end.join
 end
 
 get '/m/?' do
-  fp.find_moments.map do |i|
-    "#{i['date'].localtime} - #{fp.url_id2s i['url']} - #{fp.url_id2s i['last_effective_url']} - #{decode_digest i['sha256']}<br>"
+  fishprint.find_moments.map do |i|
+    "#{i['date'].localtime} - #{fishprint.url_id2s i['url']} - #{fishprint.url_id2s i['last_effective_url']} - #{decode_digest i['sha256']}<br>"
   end.join
 end
 
 get '/u/:oid' do |oid|
-  fp.find_moments(url:BSON::ObjectId.from_string(oid)).map do |i|
+  fishprint.find_moments(url:BSON::ObjectId.from_string(oid)).map do |i|
     "#{i[:date]} #{decode_digest i[:sha256]}<br>"
   end.join
 end
 
 get '/d/:hex' do |hex|
-  fp.download(hex)
+  fishprint.download(hex)
 end
