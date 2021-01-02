@@ -64,7 +64,7 @@ Option_curl = [
     long:        'curl.retry_plan',
     description: 'Curl Retry delay(s)',
     normalizer: -> s { s.split(',').map{ B::dhms2sec _1 } },
-    default:     '1sec,5sec,1min',
+    default:     '1sec,3sec',
   ),
   B::Option::Property.new(
     long:        'curl.connect_timeout',
