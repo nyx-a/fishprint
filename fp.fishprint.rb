@@ -106,8 +106,7 @@ class FishPrint
   end
 
   def get uri, referer:nil, agent:nil
-    @retry_plan.each_with_index do |wait,cnt|
-      cnt += 1 # should be 1 origin
+    for cnt in (1..)
       begin
         tstart = Time.now
         result = get1 uri, count:cnt, referer:referer, agent:agent
@@ -117,7 +116,8 @@ class FishPrint
       rescue Exception => err
         save_error uri, err.class.name, cnt, tstart
       end
-      sleep wait
+      break if @retry_plan.nil? or cnt > @retry_plan.size
+      sleep @retry_plan[cnt-1]
     end
     return nil
   end
