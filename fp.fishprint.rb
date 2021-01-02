@@ -4,10 +4,8 @@ require 'curb'
 require 'mongo'
 require_relative 'b.structure.rb'
 require_relative 'b.dhms.rb'
-require_relative 'fp.rb'
 
 Mongo::Logger.logger.level = Logger::ERROR
-
 
 
 # "Hexadecimal" -> BSON::Binary(Hexadecimal)
@@ -26,11 +24,10 @@ def decode_digest b
 end
 
 
-
 class FishPrint
 
   def initialize(
-    agent:nil,
+    agent:    nil,
     connect_timeout:,
     timeout:,
     max_redirects:,
@@ -38,9 +35,9 @@ class FishPrint
     retry_plan:,
     server:,
     db:,
-    user:nil,
-    password:nil,
-    auth:nil
+    user:     nil,
+    password: nil,
+    auth:     nil
   )
     @agent           = agent
     @connect_timeout = connect_timeout

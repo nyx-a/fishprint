@@ -18,15 +18,5 @@ module FP
   A_RESPONSE_CODE      = "#{A_PREFIX}Response-Code"
   A_NEW_URL            = "#{A_PREFIX}New-Url"
   A_NEW_BODY           = "#{A_PREFIX}New-Body"
-
-  def self.parse_header str
-    leftend = Regexp.new('^' + Regexp.escape(A_PREFIX))
-    str.lines(chomp:true).grep(leftend).to_h do |l|
-      l =~ /:/
-      k = $~.pre_match.delete_prefix(A_PREFIX).strip
-      v = $~.post_match.strip.downcase
-      [k, v]
-    end
-  end
 end
 

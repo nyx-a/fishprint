@@ -3,6 +3,8 @@
 
 require_relative 'fp.option.rb'
 require_relative 'fp.fishprint.rb'
+require_relative 'fp.literal.rb'
+require_relative 'b.log.rb'
 
 begin
   option = B::Option.new
@@ -33,21 +35,30 @@ fishprint = FishPrint.new(
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+log = B::Log.new file:option[:log]
+Process.daemon true if option[:daemonize]
+log.i "Process started. PID=#{$$}"
+at_exit do
+  log.i "Process terminated. PID=#{$$}"
+  log.gap
+end
+
 require 'sinatra'
-# require 'sinatra/reloader'
 
 set :bind, option['sinatra.bind']
 set :port, option['sinatra.port']
 
 post '/fetch' do
-  result = fishprint.get(
-    request.params[FP::Q_TARGET],
-    referer: request.params[FP::Q_REFERER],
-    agent:   request.params[FP::Q_AGENT],
-  )
+  rurl = request.params[FP::Q_TARGET]
+  rref = request.params[FP::Q_REFERER]
+  ragt = request.params[FP::Q_AGENT]
+  log.i "<< #{rurl} (r:#{rref}) (a:#{ragt})"
+  result = fishprint.get rurl, referer:rref, agent:ragt
   if result.nil?
+    log.i ">> (empty)"
     body ''
   else
+    log.i ">> status:#{result.response_code} body:#{result.body.size}"
     headers[FP::A_DATE]               = result.date.to_f.to_s
     headers[FP::A_URL]                = result.url
     headers[FP::A_LAST_EFFECTIVE_URL] = result.last_effective_url
@@ -89,3 +100,4 @@ end
 get '/d/:hex' do |hex|
   fishprint.download(hex)
 end
+
