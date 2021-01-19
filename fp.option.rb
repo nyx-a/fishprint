@@ -8,20 +8,14 @@ Option_fishprint = [
   B::Option::Property.new(
     long:        'toml',
     description: 'TOML filename (find from XDG config)',
-    normalizer: -> s { B::Path.xdgfind :config, s },
-    default:     'fishprint.toml',
+    normalizer: -> s { B::Path.xdgfind s, :config },
+    default:     B::Path.xdgattempt('fishprint.toml', :config),
   ),
   B::Option::Property.new(
     long:        'daemonize',
     short:       'd',
     boolean:     true,
     description: 'Run as a daemon process',
-  ),
-  B::Option::Property.new(
-    long:        'log',
-    normalizer: -> s { B::Path.xdgvisit :cache, s },
-    description: 'log filename (write to XDG cache)',
-    default:     'fishprint.log',
   ),
 ]
 
@@ -87,7 +81,7 @@ Option_curl = [
   B::Option::Property.new(
     long:        'curl.cookiejar',
     description: 'Curl Cookiejar filename (write to XDG cache)',
-    normalizer: -> s { B::Path.xdgvisit :cache, s },
+    normalizer: -> s { B::Path.xdgvisit s, :cache },
     default:     'fishprint.cookies.txt',
   ),
 ]

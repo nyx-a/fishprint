@@ -1,0 +1,34 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    bson (4.11.1)
+    curb (0.9.11)
+    mongo (2.14.0)
+      bson (>= 4.8.2, < 5.0.0)
+    mustermann (1.1.1)
+      ruby2_keywords (~> 0.0.1)
+    parslet (1.8.2)
+    rack (2.2.3)
+    rack-protection (2.1.0)
+      rack
+    ruby2_keywords (0.0.2)
+    sinatra (2.1.0)
+      mustermann (~> 1.0)
+      rack (~> 2.2)
+      rack-protection (= 2.1.0)
+      tilt (~> 2.0)
+    tilt (2.0.10)
+    toml (0.2.0)
+      parslet (~> 1.8.0)
+
+PLATFORMS
+  x86_64-darwin-20
+
+DEPENDENCIES
+  curb
+  mongo
+  sinatra
+  toml
+
+BUNDLED WITH
+   2.2.3

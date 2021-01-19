@@ -1,7 +1,7 @@
 
 require 'curb'
 require_relative 'b.structure.rb'
-require_relative 'fp.literal.rb'
+require_relative 'fp.query.rb'
 require_relative 'fp.option.rb'
 
 module FP
@@ -26,15 +26,26 @@ module FP
 
   def self.request url, host:, port:, referer:nil, agent:nil
     f = [ ]
-    f.push Curl::PostField.content(FP::Q_TARGET, url)
-    f.push Curl::PostField.content(FP::Q_REFERER, referer) if referer
-    f.push Curl::PostField.content(FP::Q_AGENT, agent) if agent
+    f.push Curl::PostField.content('target', url)
+    f.push Curl::PostField.content('referer', referer) if referer
+    f.push Curl::PostField.content('agent', agent) if agent
     r = Curl::Easy.http_post("#{host}:#{port}/fetch", *f)
     Result.new(
       head: r.head,
       body: r.body,
       meta: FP.parse_header(r.head),
     )
+  end
+
+  class Client
+    def initialize host:, port:
+      @host = host
+      @port = port
+    end
+
+    def request url
+      FP.request url, host:@host, port:@port
+    end
   end
 end
 

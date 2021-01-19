@@ -80,7 +80,7 @@ class FishPrint
     fpr = save_data uri, r.body, {
       response_code:       r.response_code,
       primary_ip:          r.primary_ip,
-      file_time:           (r.file_time==-1 ? nil : Time.at(r.file_time)),
+      file_time:          (r.file_time==-1 ? nil : Time.at(r.file_time)),
       last_effective_url:  get_urlid(r.last_effective_url),
       redirect_count:      r.redirect_count,
       redirect_time:       r.redirect_time,
@@ -186,13 +186,56 @@ class FishPrint
     after['_id'] # BSON::ObjectId
   end
 
-  def download sha256
-    obj = @bucket.find(filename:sha256).first
-    if obj
-      s = String.new
-      @bucket.download_to_stream obj[:_id], s
-      s
+  def find_urlid url
+    r = @urls.find(url:url).to_a
+    if r.one?
+      r[0]['_id'] # BSON::ObjectId
     end
+  end
+
+  def reproduce u, s:nil, is:true, e:nil, ie:true, desc:true
+    if oid = find_urlid(u)
+      if s.nil? and e.nil?
+        qd = nil
+      else
+        qd = { }
+        qd.update (is ? '$gte' : '$gt')=>s if s
+        qd.update (ie ? '$lte' : '$lt')=>e if e
+      end
+      @moments.find(
+        {
+          'url'  => oid,
+          'date' => qd,
+        }.compact,
+        {
+          'sort' => {date: (desc ? -1 : 1)}
+        },
+      ).map do |xxx|
+        Result.new(
+          date:          xxx[:date],
+          response_code: xxx[:response_code],
+          body:          download(xxx[:sha256]),
+        )
+      end
+    end
+  end
+
+  def download sha256
+    key = case sha256
+          when BSON::Binary then 'sha256'
+          when String       then 'filename'
+          else
+            raise "invalid type #{sha256}(#{sha256.class})"
+          end
+    if o = @bucket.find(key=>sha256).first
+      download_by_id o[:_id]
+    end
+  end
+
+  def download_by_id oid
+    buff = String.new
+    @bucket.download_to_stream oid, buff
+    buff
   end
 
   # url may be Regexp or String

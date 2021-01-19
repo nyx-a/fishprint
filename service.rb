@@ -3,21 +3,15 @@
 
 require_relative 'fp.option.rb'
 require_relative 'fp.fishprint.rb'
-require_relative 'fp.literal.rb'
+require_relative 'fp.query.rb'
 require_relative 'b.log.rb'
 
-begin
-  option = B::Option.new
-  option.register Option_fishprint
-  option.register Option_mongo
-  option.register Option_curl
-  option.register Option_sinatra
-  option.make!
-rescue => e
-  STDERR.puts e.message
-  STDERR.puts
-  exit 1
-end
+option = B::Option.new
+option.register Option_fishprint
+option.register Option_mongo
+option.register Option_curl
+option.register Option_sinatra
+option.make!
 
 fishprint = FishPrint.new(
   agent:           option['curl.agent'],
@@ -35,7 +29,9 @@ fishprint = FishPrint.new(
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-log = B::Log.new file:option[:log]
+lp = B::Path.xdgvisit('log.fishprint.log', :cache)
+log = B::Log.new file:lp
+
 Process.daemon true if option[:daemonize]
 log.i "Process started. PID=#{$$}"
 at_exit do
@@ -49,23 +45,34 @@ set :bind, option['sinatra.bind']
 set :port, option['sinatra.port']
 
 post '/fetch' do
-  rurl = request.params[FP::Q_TARGET]
-  rref = request.params[FP::Q_REFERER]
-  ragt = request.params[FP::Q_AGENT]
-  log.i "<< #{rurl} (r:#{rref}) (a:#{ragt})"
-  result = fishprint.get rurl, referer:rref, agent:ragt
-  if result.nil?
-    log.i ">> (empty)"
-    body ''
-  else
-    log.i ">> status:#{result.response_code} body:#{result.body.size}"
-    headers[FP::A_DATE]               = result.date.to_f.to_s
-    headers[FP::A_URL]                = result.url
-    headers[FP::A_LAST_EFFECTIVE_URL] = result.last_effective_url
-    headers[FP::A_RESPONSE_CODE]      = result.response_code.to_s
-    headers[FP::A_NEW_URL]            = result.new_url.to_s
-    headers[FP::A_NEW_BODY]           = result.new_body.to_s
-    body result.body
+  begin
+    q = FP::Query.new(**request.params) # >> ArgumentError
+    log.i "#{q.inspect}"
+
+    if q.ranged?
+
+      ####
+
+    else
+      result = fishprint.get q.target, referer:q.referer, agent:q.agent
+    end
+
+
+    if result.nil?
+      log.i "> (empty)"
+      body ''
+    else
+      log.i "> status:#{result.response_code} body:#{result.body.size}"
+      headers[FP::A_DATE]               = result.date.to_f.to_s
+      headers[FP::A_URL]                = result.url
+      headers[FP::A_LAST_EFFECTIVE_URL] = result.last_effective_url
+      headers[FP::A_RESPONSE_CODE]      = result.response_code.to_s
+      headers[FP::A_NEW_URL]            = result.new_url.to_s
+      headers[FP::A_NEW_BODY]           = result.new_body.to_s
+      body result.body
+    end
+  rescue ArgumentError => ex
+    log.e ex.message
   end
 end
 
@@ -100,4 +107,13 @@ end
 get '/d/:hex' do |hex|
   fishprint.download(hex)
 end
+
+get '/proxy.pac' do
+  body <<-"PAC"
+  function FindProxyForURL(url, host) {
+    return "PROXY #{option['sinatra.bind']}:#{option['sinatra.port']}";
+  }
+  PAC
+end
+
 
