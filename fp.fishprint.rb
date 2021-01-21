@@ -4,6 +4,7 @@ require 'curb'
 require 'mongo'
 require_relative 'b.structure.rb'
 require_relative 'b.dhms.rb'
+require_relative 'fp.result.rb'
 
 Mongo::Logger.logger.level = Logger::ERROR
 
@@ -61,6 +62,7 @@ class FishPrint
     @bucket  = Mongo::Grid::FSBucket.new @client
   end
 
+  # -> Result
   def get1 uri, count:, referer:nil, agent:nil
     # r is Curl::Easy
     r = Curl.get uri do |x|
@@ -76,11 +78,10 @@ class FishPrint
       x.cookiejar          = @cookiejar
     end
     new_url = is_unknown_url? uri
-    # fpr is Fishprint::Result
-    fpr = save_data uri, r.body, {
+    result = save_data uri, r.body, {
       response_code:       r.response_code,
       primary_ip:          r.primary_ip,
-      file_time:          (r.file_time==-1 ? nil : Time.at(r.file_time)),
+      file_time: (r.file_time==-1 ? nil : Time.at(r.file_time)),
       last_effective_url:  get_urlid(r.last_effective_url),
       redirect_count:      r.redirect_count,
       redirect_time:       r.redirect_time,
@@ -94,47 +95,44 @@ class FishPrint
       count:               count,
       head:                r.head,
     }
-    return Result.new(
-      date:               fpr.date,
+    return result.update(
       body:               r.body,
       url:                uri,
       last_effective_url: r.last_effective_url,
       response_code:      r.response_code,
       new_url:            new_url,
-      new_body:           fpr.new_body,
     )
   end
 
+  # -> result or nil
   def get uri, referer:nil, agent:nil
     for cnt in (1..)
       begin
         tstart = Time.now
         result = get1 uri, count:cnt, referer:referer, agent:agent
         if result.response_code == 200
-          return result # <- Fishprint::Result
+          return result
         end
       rescue Exception => err
-        save_error uri, err.class.name, cnt, tstart
+        tend = Time.now
+        @errors.insert_one(
+          url:             get_urlid(uri),
+          date:            tend,
+          total_time:      (tend - tstart),
+          exception:       err.class.name,
+          message:         err.message,
+          count:           cnt,
+          retry_plan:      @retry_plan,
+          agent:           @agent,
+          connect_timeout: @connect_timeout,
+          timeout:         @timeout,
+          max_redirects:   @max_redirects,
+        )
       end
       break if @retry_plan.nil? or cnt > @retry_plan.size
       sleep @retry_plan[cnt-1]
     end
     return nil
-  end
-
-  def save_error src, ex, cnt, start_time, end_time=Time.now
-    @errors.insert_one(
-      url:             get_urlid(src),
-      date:            end_time,
-      total_time:      (end_time - start_time),
-      exception:       ex,
-      count:           cnt,
-      retry_plan:      @retry_plan,
-      agent:           @agent,
-      connect_timeout: @connect_timeout,
-      timeout:         @timeout,
-      max_redirects:   @max_redirects,
-    )
   end
 
   def save_data src, blob, metadata={ }
@@ -193,30 +191,35 @@ class FishPrint
     end
   end
 
-  def reproduce u, s:nil, is:true, e:nil, ie:true, desc:true
-    if oid = find_urlid(u)
-      if s.nil? and e.nil?
-        qd = nil
-      else
-        qd = { }
-        qd.update (is ? '$gte' : '$gt')=>s if s
-        qd.update (ie ? '$lte' : '$lt')=>e if e
-      end
-      @moments.find(
-        {
-          'url'  => oid,
-          'date' => qd,
-        }.compact,
-        {
-          'sort' => {date: (desc ? -1 : 1)}
-        },
-      ).map do |xxx|
-        Result.new(
-          date:          xxx[:date],
-          response_code: xxx[:response_code],
-          body:          download(xxx[:sha256]),
-        )
-      end
+  def find_range u, s:nil, is:true, e:nil, ie:true, desc:true, limit:nil
+    unless oid = find_urlid(u)
+      return
+    end
+    qd = { }
+    qd.update (is ? '$gte' : '$gt')=>s if s
+    qd.update (ie ? '$lte' : '$lt')=>e if e
+    qd = nil if qd.empty?
+    @moments.find(
+      {
+        'url'   => oid,
+        'date'  => qd,
+      }.compact,
+      {
+        'sort'  => {date: (desc ? -1 : 1)},
+        'limit' => limit,
+      }.compact,
+    )
+  end
+
+  def reproduce u, s:nil, is:true, e:nil, ie:true, desc:true, limit:nil
+    find_range(
+      u, s:s, is:is, e:e, ie:ie, desc:desc, limit:limit
+    )&.map do
+      Result.new(
+        date:          _1[:date],
+        body:          download(_1[:sha256]),
+        response_code: _1[:response_code],
+      )
     end
   end
 
@@ -261,16 +264,6 @@ class FishPrint
 
   def find_digests q=nil
     @digests.find q
-  end
-
-  class Result < B::Structure
-    attr_accessor :date
-    attr_accessor :body
-    attr_accessor :url
-    attr_accessor :last_effective_url
-    attr_accessor :response_code
-    attr_accessor :new_url
-    attr_accessor :new_body
   end
 end
 

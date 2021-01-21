@@ -1,6 +1,7 @@
 #! /usr/bin/env ruby
 
-require_relative 'fp.client.rb'
+require_relative 'b.option.rb'
+require_relative 'fp.query.rb'
 
 begin
   option = B::Option.new(
@@ -23,8 +24,7 @@ rescue => e
 end
 
 for i in option.bare
-  result = FP.request( i, host:option['host'], port:option['port'] )
-  p result.class
+  result = Query.request i, host:option['host'], port:option['port']
   p result
 end
 

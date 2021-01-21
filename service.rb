@@ -4,6 +4,7 @@
 require_relative 'fp.option.rb'
 require_relative 'fp.fishprint.rb'
 require_relative 'fp.query.rb'
+require_relative 'fp.result.rb'
 require_relative 'b.log.rb'
 
 option = B::Option.new
@@ -46,44 +47,34 @@ set :port, option['sinatra.port']
 
 post '/fetch' do
   begin
-    q = FP::Query.new(**request.params) # >> ArgumentError
+    q = Query.new(**request.params)
     log.i "#{q.inspect}"
-
-    if q.ranged?
-
-      ####
-
-    else
-      result = fishprint.get q.target, referer:q.referer, agent:q.agent
+    unless q.target.is_a? String ###### implement B::Structure
+      log.f "URL isn't String"
+      body ""
+      next
     end
-
+    result = if q.ranged?
+               q.reproduce fishprint
+             else
+               q.get fishprint
+             end
 
     if result.nil?
       log.i "> (empty)"
       body ''
     else
-      log.i "> status:#{result.response_code} body:#{result.body.size}"
-      headers[FP::A_DATE]               = result.date.to_f.to_s
-      headers[FP::A_URL]                = result.url
-      headers[FP::A_LAST_EFFECTIVE_URL] = result.last_effective_url
-      headers[FP::A_RESPONSE_CODE]      = result.response_code.to_s
-      headers[FP::A_NEW_URL]            = result.new_url.to_s
-      headers[FP::A_NEW_BODY]           = result.new_body.to_s
+      log.i "> #{result.inspect}"
+      for k,v in result.compose_header
+        headers[k] = v
+      end
       body result.body
     end
   rescue ArgumentError => ex
     log.e ex.message
+  rescue Exception => ex
+    log.f ex.message
   end
-end
-
-get '/form' do
-  [
-    '<form method="post" action="/fetch">',
-    %Q(  <input type="text" name="#{FP::Q_TARGET}">),
-    %Q(  <input type="text" name="#{FP::Q_AGENT}">),
-    '<input type="submit" value="魚拓">',
-    '</form>',
-  ].join
 end
 
 get '/u/?' do
@@ -94,7 +85,7 @@ end
 
 get '/m/?' do
   fishprint.find_moments.map do |i|
-    "#{i['date'].localtime} - #{fishprint.url_id2s i['url']} - #{fishprint.url_id2s i['last_effective_url']} - #{decode_digest i['sha256']}<br>"
+    "#{i['date'].localtime} - #{fishprint.url_id2s i['url']} - #{fishprint.url_id2s i['last_effective_url']} ( #{i['response_code']} ) #{decode_digest i['sha256']}<br>"
   end.join
 end
 
@@ -107,13 +98,4 @@ end
 get '/d/:hex' do |hex|
   fishprint.download(hex)
 end
-
-get '/proxy.pac' do
-  body <<-"PAC"
-  function FindProxyForURL(url, host) {
-    return "PROXY #{option['sinatra.bind']}:#{option['sinatra.port']}";
-  }
-  PAC
-end
-
 

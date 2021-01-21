@@ -1,5 +1,5 @@
 #! /usr/bin/env ruby
-# -*- coding: utf-8 -*-
+# for test
 
 require_relative 'fp.option.rb'
 require_relative 'fp.fishprint.rb'
