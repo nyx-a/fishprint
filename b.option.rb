@@ -166,7 +166,7 @@ class B::Option
         description: 'TOML file to underlay',
       )
     end
-    if find_l(:help).nil?
+    if find_l('help').nil?
       register Property.new(
         long:        'help',
         description: 'Show this help',
@@ -204,12 +204,16 @@ class B::Option
 
   def slice *longkeys
     filter = longkeys.flatten.map{ plong _1 }
-    @property.intersection(filter).map{ [_1.long, @value[_1]] }.to_h
+    @property.intersection(filter).map{
+      [_1.long.to_sym, @value[_1]]
+    }.to_h
   end
 
   def except *longkeys
     mask = longkeys.flatten.map{ plong _1 }
-    @property.difference(mask).map{ [_1.long, @value[_1]] }.to_h
+    @property.difference(mask).map{
+      [_1.long.to_sym, @value[_1]]
+    }.to_h
   end
 
   def bare

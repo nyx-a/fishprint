@@ -16,13 +16,6 @@ class B::Path < String
     return new.tail
   end
 
-  def self.directory p, base:'.', confirm:nil
-    new = allocate.replace File.expand_path p, base
-    cnd = [confirm].flatten.compact.map(&:to_s) | ['directory']
-    new.raise_unless cnd
-    return new.tail
-  end
-
   def initialize p, base:'.', confirm:'exist'
     replace File.expand_path p, base
     raise_unless confirm if confirm
@@ -83,7 +76,10 @@ class B::Path < String
     unless n.empty?
       raise "#{self.class}(#{self}) is not #{n.join(',')}"
     end
+    self
   end
+  alias :undoubtedly :raise_unless
+  alias :expect :raise_unless
 
   #
   # Method Pass through
@@ -111,35 +107,38 @@ end
 # XDG Base Directory Support
 #
 
-B::Path::XDGConfig = [
-  ENV['XDG_CONFIG_HOME'],             # 1
-  "#{ENV['HOME']}/.config",           # 2
-  ENV['XDG_CONFIG_DIRS']&.split(':'), # 3
-  '/etc/xdg',                         # 4
-].flatten.map do
-  B::Path.new _1, confirm:%i(directory executable) rescue nil
-end.compact
-
-B::Path::XDGCache = [
-  ENV['XDG_CACHE_HOME'],   # 1
-  "#{ENV['HOME']}/.cache", # 2
-].flatten.map do
-  B::Path.new _1, confirm:%i(directory executable) rescue nil
-end.compact
-
 class B::Path
-  def self.xdgfind kind, fname
+  XDGConfig = [
+    ENV['XDG_CONFIG_HOME'],             # 1
+    "#{ENV['HOME']}/.config",           # 2
+    ENV['XDG_CONFIG_DIRS']&.split(':'), # 3
+    '/etc/xdg',                         # 4
+  ].flatten.compact
+  XDGConfig.map!{ B::Path.new(_1, confirm:nil).tail }
+
+  XDGCache = [ "#{ENV['HOME']}/.cache" ] # 2
+  if ENV.key? 'XDG_CACHE_HOME'
+    XDGCache.unshift ENV['XDG_CACHE_HOME'] # 1
+  end
+  XDGCache.map!{ B::Path.new(_1, confirm:nil).tail }
+
+  def self.xdgfind fname, kind
     literal = Object.const_get "B::Path::XDG#{kind.capitalize}"
     list = literal.map{ _1 + fname }
-    list.unshift B::Path.new fname, confirm:nil
+    list.unshift B::Path.new(fname, confirm:nil).tail
     list.find{ _1.confirm :exist }
   end
 
-  def self.xdgvisit kind, fname
+  def self.xdgvisit fname, kind
     literal = Object.const_get "B::Path::XDG#{kind.capitalize}"
     p = literal.first + fname
     B::Path.dig p.dirname
     p
+  end
+
+  def self.xdgattempt fname, kind
+    literal = Object.const_get "B::Path::XDG#{kind.capitalize}"
+    literal.map{ _1 + fname }.find &:exist?
   end
 end
 

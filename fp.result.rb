@@ -1,9 +1,10 @@
 
+require 'time'
 require_relative 'b.structure.rb'
 
 
 # Query Result
-# sent/received embedded in the http header
+# received embedded in the http header
 
 class Result < B::Structure
 
@@ -19,13 +20,35 @@ class Result < B::Structure
     end
   end
 
-  attr_accessor :date
+  attr_reader   :date
   attr_accessor :body
   attr_accessor :url
   attr_accessor :last_effective_url
   attr_accessor :response_code
-  attr_accessor :new_url
-  attr_accessor :new_body
+  attr_reader   :new_url
+  attr_reader   :new_body
+
+  def date= o
+    @date = Time.parse o
+  end
+
+  def new_url= o
+    @new_url = case o
+               when /true/i  then true
+               when /false/i then false
+               else
+                 raise
+               end
+  end
+
+  def new_body= o
+    @new_body = case o
+                when /true/i  then true
+                when /false/i then false
+                else
+                  raise
+                end
+  end
 
   # -> Hash
   def compose_header
@@ -44,9 +67,9 @@ class Result < B::Structure
     [
       "Status:#{@response_code}",
       "BodySize:#{@body&.size}",
-      "NewURL:#{@new_url.inspect}",
-      "NewBody:#{@new_body.inspect}",
-    ].join(' ')
+      (@new_url ? '<<NewURL>>' : nil),
+      (@new_body ? '<<NewBODY>>' : nil),
+    ].compact.join(' ')
   end
 end
 

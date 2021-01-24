@@ -191,6 +191,7 @@ class FishPrint
     end
   end
 
+  # -> Mongo::Collection::View
   def find_range u, s:nil, is:true, e:nil, ie:true, desc:true, limit:nil
     unless oid = find_urlid(u)
       return
@@ -211,14 +212,19 @@ class FishPrint
     )
   end
 
-  def reproduce u, s:nil, is:true, e:nil, ie:true, desc:true, limit:nil
-    find_range(
-      u, s:s, is:is, e:e, ie:ie, desc:desc, limit:limit
-    )&.map do
+  # -> Result
+  def reproduce u, s:nil, is:true, e:nil, ie:true, desc:true
+    entity = find_range(
+      u, s:s, is:is, e:e, ie:ie, desc:desc, limit:1
+    ).first
+    if entity.nil?
+      nil
+    else
       Result.new(
-        date:          _1[:date],
-        body:          download(_1[:sha256]),
-        response_code: _1[:response_code],
+        url:           u,
+        date:          entity[:date],
+        body:          download(entity[:sha256]),
+        response_code: entity[:response_code],
       )
     end
   end

@@ -49,7 +49,7 @@ post '/fetch' do
   begin
     q = Query.new(**request.params)
     log.i "#{q.inspect}"
-    unless q.target.is_a? String ###### implement B::Structure
+    unless q.target.is_a? String
       log.f "URL isn't String"
       body ""
       next

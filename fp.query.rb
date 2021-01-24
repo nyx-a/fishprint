@@ -33,13 +33,12 @@ class Query < B::Structure
   # local (old)
   def reproduce fp
     fp.reproduce(
-      u,
+      @target,
       s:     @date_start,
       is:    @include_start,
       e:     @date_end,
       ie:    @include_end,
-      desc:  (@edge==:latest ? true : false),
-      limit: 1
+      desc:  (@edge==:oldest ? false : true ),
     )
   end
 
@@ -49,18 +48,16 @@ class Query < B::Structure
   end
 
   def inspect
-    to_h
+    compact
       .sort_by{ |k,v| KEYS.index k }
       .map{ |k,v| "#{k}:#{v}" }
-      .join(' ')
+      .join("\n")
   end
 
-  # remote (new)
-  def self.request url, host:, port:, referer:nil, agent:nil
-    f = [ ]
-    f.push Curl::PostField.content 'target', url
-    f.push Curl::PostField.content 'referer', referer if referer
-    f.push Curl::PostField.content 'agent', agent if agent
+  def post host:, port:
+    f = self.compact.map do |k,v|
+      Curl::PostField.content k, v.to_s
+    end
     r = Curl::Easy.http_post("#{host}:#{port}/fetch", *f)
     result = Result.new body:r.body
     result.read_header! r.head
