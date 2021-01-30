@@ -1,6 +1,7 @@
 #! /usr/bin/env ruby
 # -*- coding: utf-8 -*-
 
+require 'uri'
 require_relative 'fp.option.rb'
 require_relative 'fp.fishprint.rb'
 require_relative 'fp.query.rb'
@@ -99,3 +100,15 @@ get '/d/:hex' do |hex|
   fishprint.download(hex)
 end
 
+post '/q/uri/?' do
+  u = URI.decode_www_form_component params['uri']
+  fishprint.find_urlid(u) ? 'true' : 'false'
+end
+
+get '/test/:grep' do |grep|
+  fishprint.find_moments({},{limit:100, sort:{date:-1}}).map do |i|
+    url = fishprint.url_id2s i['url']
+    digest = decode_digest i[:sha256]
+    %Q(<img src="/d/#{digest}")
+  end
+end

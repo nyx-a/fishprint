@@ -256,20 +256,20 @@ class FishPrint
     @urls.find('_id':id).to_a.last['url']
   end
 
-  def find_urls q=nil
-    @urls.find q
+  def find_urls(...)
+    @urls.find(...)
   end
 
-  def find_buckets q=nil
-    @bucket.find q
+  def find_buckets(...)
+    @bucket.find(...)
   end
 
-  def find_moments q=nil
-    @moments.find q
+  def find_moments(...)
+    @moments.find(...)
   end
 
-  def find_digests q=nil
-    @digests.find q
+  def find_digests(...)
+    @digests.find(...)
   end
 end
 

@@ -8,18 +8,17 @@ begin
   option = B::Option.new(
     host:          'fishprint host',
     port:          'fishprint port',
-    referer:       '',
-    agent:         '',
-    date_start:    '',
-    date_end:      '',
-    include_start: '',
-    include_end:   '',
+    referer:       'referer',
+    agent:         'user agent',
+    date_start:    'Search range for the past',
+    date_end:      'Search range for the past',
+    include_start: 'Search range for the past',
+    include_end:   'Search range for the past',
     edge:          'oldest or latest',
   )
   option.short(
     host: 'h',
     port: 'p',
-    edge: 'e',
   )
   option.default(
     host: '192.168.0.100',

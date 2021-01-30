@@ -29,24 +29,32 @@ class Result < B::Structure
   attr_reader   :new_body
 
   def date= o
-    @date = Time.parse o
+    @date = if o.is_a? String
+              Time.parse o
+            else
+              o
+            end
   end
 
   def new_url= o
     @new_url = case o
+               when true,false,nil
+                 o
                when /true/i  then true
                when /false/i then false
                else
-                 raise
+                 o
                end
   end
 
   def new_body= o
     @new_body = case o
+                when true,false,nil
+                  o
                 when /true/i  then true
                 when /false/i then false
                 else
-                  raise
+                  o
                 end
   end
 
