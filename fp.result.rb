@@ -75,8 +75,8 @@ class Result < B::Structure
     [
       "Status:#{@response_code}",
       "BodySize:#{@body&.size}",
-      (@new_url ? '<<NewURL>>' : nil),
-      (@new_body ? '<<NewBODY>>' : nil),
+      (@new_url ? 'NewURL' : nil),
+      (@new_body ? 'NewBODY' : nil),
     ].compact.join(' ')
   end
 end

@@ -1,11 +1,10 @@
-#! /usr/bin/env ruby
 
 require 'addressable'
 require 'nokogiri'
 require 'mime-types'
-require_relative 'b.structure.rb'
-require_relative 'fp.query.rb'
-require_relative 'fp.inquiry.rb'
+require_relative '../b.structure.rb'
+require_relative '../fp.query.rb'
+require_relative '../fp.inquiry.rb'
 
 
 # -> Array[ Addressable::URI ]
@@ -41,6 +40,14 @@ class Skimmer < B::Structure
     @inquiry = Inquiry.new host:@host, port:@port
   end
 
+  def is_unknown_uri? o
+    @inquiry.is_unknown_uri? o
+  end
+
+  def is_unknown_digest? o
+    @inquiry.is_unknown_digest? o
+  end
+
   # -> Result / nil
   def get target, **option
     q = Query.new(target:target, **option)
@@ -65,16 +72,3 @@ class Skimmer < B::Structure
   end
 end
 
-if __FILE__ == $0
-
-  skimmer = Skimmer.new(
-    host:    '192.168.0.100',
-    port:    33333,
-    verbose: true,
-  )
-  p skimmer
-  puts
-
-  skimmer.skim ARGV.shift
-
-end
