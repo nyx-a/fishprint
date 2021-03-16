@@ -9,7 +9,7 @@ require_relative '../fp.inquiry.rb'
 
 # -> Array[ Addressable::URI ]
 def extract result, tag:'a', attr:'href', grep:nil
-  base = Addressable::URI.parse result.url
+  base = Addressable::URI.parse result.last_effective_url
   doc = Nokogiri::HTML result.body
   relstr = doc.css(tag).map{ _1&.attr(attr) }.compact.uniq
   if grep
@@ -22,9 +22,12 @@ end
 
 # -> Array[ Addressable::URI ]
 def filter_binaries links
-  mimehtml = MIME::Type.new('text/html')
+  mimehtml = [
+    MIME::Type.new('text/html'),
+    MIME::Type.new('application/x-httpd-php'),
+  ]
   links.select do
-    (MIME::Types.of(_1.to_s) - [mimehtml]).any? &:binary?
+    (MIME::Types.of(_1.to_s) - mimehtml).any? &:binary?
   end
 end
 
