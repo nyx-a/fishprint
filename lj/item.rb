@@ -3,6 +3,11 @@ class Item
   attr_accessor :line
   attr_accessor :children
 
+  def initialize line:nil, children:nil
+    @line     = line
+    @children = [children] if children
+  end
+
   def parse raw
     takeLines! self.class.indentScan raw
   end
@@ -29,6 +34,12 @@ class Item
 
   def inspect
     self.class.to_s self
+  end
+
+  def self.daisy_chain *list
+    list.flatten.reverse.inject nil do |right,left|
+      Item.new line:left, children:right
+    end
   end
 
   def self.to_s o, indent:2

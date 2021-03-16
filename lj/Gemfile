@@ -8,4 +8,5 @@ gem "addressable"
 gem "nokogiri"
 gem "curb"
 gem "ruby-filemagic"
+gem "mime-types"
 

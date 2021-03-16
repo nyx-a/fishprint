@@ -31,14 +31,19 @@ def follow item, skimmer, previous=nil
 end
 
 option = B::Option.new(
-  host: 'fishprint host',
-  port: 'fishprint port',
-  irb:  'REPL',
+  host:    'fishprint host',
+  port:    'fishprint port',
+  onetime: 'parse ARGV list as a onetime path (instead of as file names)',
+  verbose: 'verbose mode',
+  irb:     'REPL',
 )
+option.boolean :onetime, :verbose
 option.short(
-  host: 'h',
-  port: 'p',
-  irb:  'i',
+  host:    'h',
+  port:    'p',
+  onetime: 'o',
+  verbose: 'v',
+  irb:     'i',
 )
 option.boolean :irb
 option.default(
@@ -47,10 +52,14 @@ option.default(
 )
 option.make!
 
-fps = Skimmer.new(**option.slice(:host,:port))
+fps = Skimmer.new(**option.slice(:host,:port,:verbose))
 
 if option[:irb]
   binding.irb
+elsif option[:onetime]
+  x = Item.daisy_chain option.bare
+  p x
+  follow x, fps
 else
   for f in option.bare
     root = Item.new.parse open(f).read
